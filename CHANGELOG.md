@@ -2,6 +2,74 @@
 
 <!-- version list -->
 
+## v1.3.1 (2026-01-28)
+
+### Bug Fixes
+
+- Add missing CLI optional dependencies and entry point
+  ([`5ec3b00`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/5ec3b00b04c04375505deac5534d81a64964acdc))
+
+- Add python-dotenv back to dev dependencies
+  ([`43ce8cd`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/43ce8cd704337322261e61c580557a12ed49919e))
+
+- Reorganize optional dependencies and add tomllib support
+  ([`aeb68df`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/aeb68dfcd169c1ace7e135dbb88c13d0bc1231f8))
+
+### Chores
+
+- **deps**: Bump actions/cache from 3 to 4
+  ([`bde76e9`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/bde76e92297e719382dbcd90d6b0207d77554196))
+
+- **deps**: Bump actions/cache from 4 to 5
+  ([`1522948`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/15229481198329b06f9ab1c692e6e565c091a1aa))
+
+- **deps**: Bump actions/checkout from 4 to 5
+  ([`a47be5a`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/a47be5a48c3e0b6eacac9e79b9e4cc6ff2060d69))
+
+- **deps**: Bump actions/checkout from 5 to 6
+  ([`63a0985`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/63a09852f5e64654185764835c09222546abc82a))
+
+- **deps**: Bump actions/setup-python from 4 to 6
+  ([`68ad6b4`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/68ad6b42e481e7da4856979b66d151480c0175a1))
+
+### Continuous Integration
+
+- Add optional dependencies installation validation
+  ([`582ab43`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/582ab4322b96488df3cfce907aaba74ec115b023))
+
+### Documentation
+
+- Add documentation for optional dependencies installation
+  ([`c362d36`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/c362d36b45edfdc241b5b0606b9be03f3f536810))
+
+- Add examples for async client, config file handling, and dotenv usage
+  ([`43608fa`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/43608fa846f8e101f6b1e7a6686b92b75a01d9ef))
+
+- Fix pip install command for specific version/tag
+  ([`b8d7e20`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/b8d7e2092e8496d0717d42147cf03e073c0d93c6))
+
+- Update CHANGELOG with API v2/v3 features
+  ([`b036414`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/b036414342d7e47d917aead0fb2b7615b383d28d))
+
+- Update README template for version formatting
+  ([`36c9238`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/36c9238e9dd9a9c19aa6840eb049f2c4e2b27835))
+
+- Update README.MD [automated]
+  ([`dacc39e`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/dacc39ea8e3127b94ea6d7f1423f309f403ac72b))
+
+- Update README.MD [automated]
+  ([`f26cb98`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/f26cb98135b8f81ec705331659559a8a5867c8dd))
+
+- Update README.MD [automated]
+  ([`3c03a86`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/3c03a86234d69909af9b33fe16c0c5b2cd6f850b))
+
+- Update README.MD [automated]
+  ([`d70b032`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/d70b0328c0eccc0e4890b8f78293cf5bcf6bb24d))
+
+- Update SECURITY.MD [automated]
+  ([`660c93b`](https://github.com/bauer-group/LIB-NocoDB_SimpleClient/commit/660c93b7d2e474c139079cc65216f2a6dd730fbb))
+
+
 ## v1.3.0 (2025-10-10)
 
 ### Chores
