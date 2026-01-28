@@ -1038,7 +1038,9 @@ except Exception as e:
 
 ## 🧪 Examples
 
-Check out the [`examples/`](examples/) directory for comprehensive examples:
+Check out the [`examples/`](examples/) directory for comprehensive examples. See the [Examples README](examples/README.md) for detailed documentation.
+
+### Core Examples
 
 - **[Basic Usage](examples/basic_usage.py)**: CRUD operations and fundamentals
 - **[API Version Support](examples/api_version_example.py)**: Using v2 and v3 APIs with automatic conversion
@@ -1051,6 +1053,14 @@ Check out the [`examples/`](examples/) directory for comprehensive examples:
 - **[Webhook Automation](examples/webhook_examples.py)**: Creating and managing webhooks
 - **[Link Management](examples/link_examples.py)**: Managing relationships between tables
 - **[Configuration](examples/config_examples.py)**: Different configuration methods
+
+### Optional Dependencies Examples
+
+These examples demonstrate the optional dependency groups:
+
+- **[Async Client](examples/async_example.py)**: High-performance concurrent operations (`[async]`)
+- **[Config Files](examples/config_file_example.py)**: YAML/TOML configuration loading (`[config]`)
+- **[Environment Files](examples/dotenv_example.py)**: Secure .env file management (`[dotenv]`)
 
 ## 📋 Requirements
 
