@@ -1,5 +1,5 @@
 <!-- AUTO-GENERATED FILE. DO NOT EDIT. Edit docs/README.template.MD instead. -->
-<!-- Generated on 2025-10-10 13:33:55 UTC -->
+<!-- Generated on 2026-01-28 19:58:06 UTC -->
 
 # BAUER GROUP - NocoDB Simple Client
 
@@ -15,7 +15,7 @@ A simple and powerful Python client for interacting with [NocoDB](https://nocodb
 
 **Repository Information:**
 
-- **Version:** 1.3.0 (2025-10-10)
+- **Version:** 1.3.0 (2026-01-28)
 - **Repository:** [bauer-group/LIB-NocoDB_SimpleClient](https://github.com/bauer-group/LIB-NocoDB_SimpleClient)
 - **Branch:** main
 - **Architecture:** Modular, Reusable, Enterprise-Ready
@@ -49,6 +49,8 @@ A simple and powerful Python client for interacting with [NocoDB](https://nocodb
 
 ### Installation
 
+#### Basic Installation
+
 Install from PyPI using pip:
 
 ```bash
@@ -67,6 +69,39 @@ pip install git+https://github.com/bauer-group/LIB-NocoDB_SimpleClient.git@v1.3.
 # Specific branch
 pip install git+https://github.com/bauer-group/LIB-NocoDB_SimpleClient.git@main
 ```
+
+#### Optional Features
+
+Install with optional features based on your needs:
+
+```bash
+# Command-line interface support
+pip install "nocodb-simple-client[cli]"
+
+# Async client support
+pip install "nocodb-simple-client[async]"
+
+# Configuration file support (YAML/TOML)
+pip install "nocodb-simple-client[config]"
+
+# .env file support
+pip install "nocodb-simple-client[dotenv]"
+
+# Multiple features
+pip install "nocodb-simple-client[cli,async,config]"
+
+# All features for development
+pip install "nocodb-simple-client[dev]"
+```
+
+**Available extras:**
+
+- `cli` - Command-line interface with rich output (requires `click`, `rich`)
+- `async` - Async client support (requires `aiohttp`, `aiofiles`)
+- `config` - YAML/TOML configuration file support (requires `PyYAML`, `tomli` for Python <3.11)
+- `dotenv` - .env file support for configuration (requires `python-dotenv`)
+- `dev` - All development dependencies (testing, linting, etc.)
+- `docs` - Documentation generation dependencies
 
 ### Basic Usage
 
@@ -1006,7 +1041,9 @@ except Exception as e:
 
 ## 🧪 Examples
 
-Check out the [`examples/`](examples/) directory for comprehensive examples:
+Check out the [`examples/`](examples/) directory for comprehensive examples. See the [Examples README](examples/README.md) for detailed documentation.
+
+### Core Examples
 
 - **[Basic Usage](examples/basic_usage.py)**: CRUD operations and fundamentals
 - **[API Version Support](examples/api_version_example.py)**: Using v2 and v3 APIs with automatic conversion
@@ -1019,6 +1056,14 @@ Check out the [`examples/`](examples/) directory for comprehensive examples:
 - **[Webhook Automation](examples/webhook_examples.py)**: Creating and managing webhooks
 - **[Link Management](examples/link_examples.py)**: Managing relationships between tables
 - **[Configuration](examples/config_examples.py)**: Different configuration methods
+
+### Optional Dependencies Examples
+
+These examples demonstrate the optional dependency groups:
+
+- **[Async Client](examples/async_example.py)**: High-performance concurrent operations (`[async]`)
+- **[Config Files](examples/config_file_example.py)**: YAML/TOML configuration loading (`[config]`)
+- **[Environment Files](examples/dotenv_example.py)**: Secure .env file management (`[dotenv]`)
 
 ## 📋 Requirements
 
@@ -1233,4 +1278,4 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
 
 ---
 
-*Generated on 2025-10-10 13:33:55 UTC from [docs/README.template.MD](docs/README.template.MD)*
+*Generated on 2026-01-28 19:58:06 UTC from [docs/README.template.MD](docs/README.template.MD)*
