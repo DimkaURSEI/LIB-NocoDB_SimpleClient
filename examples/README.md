@@ -61,6 +61,81 @@ This directory contains comprehensive examples demonstrating how to use the Noco
 
 **Best for**: Production applications requiring robust error handling
 
+---
+
+## Optional Dependencies Examples
+
+These examples demonstrate how to use the optional dependency groups. Each group provides additional functionality that can be installed separately based on your needs.
+
+### 5. Async Client (`async_example.py`)
+
+**Installation**: `pip install "nocodb-simple-client[async]"`
+
+**Purpose**: High-performance concurrent operations using async/await
+
+**What you'll learn**:
+
+- Setting up and using `AsyncNocoDBClient`
+- Basic async CRUD operations with context managers
+- Parallel bulk operations with automatic concurrency limiting
+- Custom semaphore-based concurrency control
+- Async error handling patterns
+- Running multiple queries in parallel with `asyncio.gather()`
+
+**Best for**: High-throughput applications, batch processing, real-time data pipelines
+
+**Dependencies installed**: `aiohttp`, `aiofiles`
+
+### 6. Configuration Files (`config_file_example.py`)
+
+**Installation**: `pip install "nocodb-simple-client[config]"`
+
+**Purpose**: Load configuration from YAML and TOML files
+
+**What you'll learn**:
+
+- Loading configuration from YAML files
+- Loading configuration from TOML files
+- JSON configuration (no extra dependencies required)
+- Managing environment-specific configurations (dev/staging/prod)
+- Graceful fallback patterns when dependencies are missing
+- Python 3.11+ `tomllib` vs `tomli` for older versions
+
+**Best for**: Applications with complex configuration needs, multi-environment deployments
+
+**Dependencies installed**: `PyYAML`, `tomli` (Python < 3.11 only)
+
+### 7. Environment Files (`dotenv_example.py`)
+
+**Installation**: `pip install "nocodb-simple-client[dotenv]"`
+
+**Purpose**: Secure secrets management with .env files
+
+**What you'll learn**:
+
+- Basic `.env` file loading with `load_dotenv()`
+- Managing multiple environment files (`.env.development`, `.env.production`)
+- Secrets management best practices and gitignore patterns
+- Reading `.env` without modifying `os.environ` using `dotenv_values()`
+- Combining `.env` files (secrets) with config files (settings)
+- Docker and cloud platform compatibility
+
+**Best for**: 12-factor apps, Docker deployments, secure credential management
+
+**Dependencies installed**: `python-dotenv`
+
+### Quick Reference: Optional Extras
+
+| Extra      | Command                                                     | Use Case                    |
+| ---------- | ----------------------------------------------------------- | --------------------------- |
+| `[async]`  | `pip install "nocodb-simple-client[async]"`                 | Async/concurrent operations |
+| `[config]` | `pip install "nocodb-simple-client[config]"`                | YAML/TOML config files      |
+| `[dotenv]` | `pip install "nocodb-simple-client[dotenv]"`                | .env file support           |
+| `[cli]`    | `pip install "nocodb-simple-client[cli]"`                   | Command-line interface      |
+| Combined   | `pip install "nocodb-simple-client[async,config,dotenv]"`   | Multiple features           |
+
+---
+
 ## Configuration
 
 Before running the examples, you'll need to configure:
