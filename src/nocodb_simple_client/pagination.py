@@ -189,11 +189,14 @@ class PaginationHandler:
         if page_size < 1:
             raise ValueError("Page size must be 1 or greater")
 
+        # Calculate offset
+        offset = (page - 1) * page_size
+        
         # Fetch one extra record to check if there are more pages
         fetch_limit = page_size + 1
 
         # Get records
-        records = self.table.get_records(sort=sort, where=where, fields=fields, limit=fetch_limit)
+        records = self.table.get_records(sort=sort, where=where, fields=fields, limit=fetch_limit, offset=offset)
 
         # Check if we have more records than requested
         has_more = len(records) > page_size

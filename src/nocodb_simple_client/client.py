@@ -31,6 +31,9 @@ if TYPE_CHECKING:
     from .config import NocoDBConfig
 
 import requests
+import urllib3
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 from .api_version import APIVersion, PathBuilder, QueryParamAdapter
@@ -95,6 +98,7 @@ class NocoDBClient:
         config: "NocoDBConfig | None" = None,
         api_version: str = "v2",
         base_id: str | None = None,
+        verify: bool = True,
     ) -> None:
         from .config import NocoDBConfig  # Import here to avoid circular import
 
@@ -140,6 +144,10 @@ class NocoDBClient:
             "Accept": "application/json",
             "Content-Type": "application/json",
             "xc-token": auth_token,
+            # Use browser User-Agent to avoid potential blocking or firewall issues
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            # Disable Keep-Alive to prevent SSLEOFError on stale connections
+            "Connection": "close",
         }
 
         if access_protection_auth:
@@ -147,6 +155,18 @@ class NocoDBClient:
 
         self._request_timeout = timeout
         self._session = requests.Session()
+
+        # Configure robust retry strategy
+        # retries for connection errors (SSLEOFError, etc) and specific status codes
+        retry_strategy = Retry(
+            total=5, 
+            backoff_factor=1, # Wait 1s, 2s, 4s...
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE", "POST", "PATCH"],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self._session.mount("https://", adapter)
+        self._session.mount("http://", adapter)
 
         if max_redirects is not None:
             self._session.max_redirects = max_redirects
@@ -156,6 +176,9 @@ class NocoDBClient:
         self.base_id = base_id
         self._path_builder = PathBuilder(self.api_version)
         self._param_adapter = QueryParamAdapter()
+        self.verify = verify
+        if not self.verify:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
         # Base ID resolver for v3 API (resolves table_id -> base_id)
         self._base_resolver = BaseIdResolver(self) if self.api_version == APIVersion.V3 else None
@@ -198,7 +221,7 @@ class NocoDBClient:
         """Make a GET request to the API."""
         url = f"{self._base_url}/{endpoint}"
         response = self._session.get(
-            url, headers=self.headers, params=params, timeout=self._request_timeout
+            url, headers=self.headers, params=params, timeout=self._request_timeout, verify=self.verify
         )
         self._check_for_error(response)
         return response.json()  # type: ignore[no-any-return]
@@ -209,7 +232,7 @@ class NocoDBClient:
         """Make a POST request to the API."""
         url = f"{self._base_url}/{endpoint}"
         response = self._session.post(
-            url, headers=self.headers, json=data, timeout=self._request_timeout
+            url, headers=self.headers, json=data, timeout=self._request_timeout, verify=self.verify
         )
         self._check_for_error(response)
         return response.json()  # type: ignore[no-any-return]
@@ -220,7 +243,7 @@ class NocoDBClient:
         """Make a PATCH request to the API."""
         url = f"{self._base_url}/{endpoint}"
         response = self._session.patch(
-            url, headers=self.headers, json=data, timeout=self._request_timeout
+            url, headers=self.headers, json=data, timeout=self._request_timeout, verify=self.verify
         )
         self._check_for_error(response)
         return response.json()  # type: ignore[no-any-return]
@@ -229,7 +252,7 @@ class NocoDBClient:
         """Make a PUT request to the API."""
         url = f"{self._base_url}/{endpoint}"
         response = self._session.put(
-            url, headers=self.headers, json=data, timeout=self._request_timeout
+            url, headers=self.headers, json=data, timeout=self._request_timeout, verify=self.verify
         )
         self._check_for_error(response)
         return response.json()  # type: ignore[no-any-return]
@@ -240,7 +263,7 @@ class NocoDBClient:
         """Make a DELETE request to the API."""
         url = f"{self._base_url}/{endpoint}"
         response = self._session.delete(
-            url, headers=self.headers, json=data, timeout=self._request_timeout
+            url, headers=self.headers, json=data, timeout=self._request_timeout, verify=self.verify
         )
         self._check_for_error(response)
         return response.json()  # type: ignore[no-any-return]
@@ -300,6 +323,7 @@ class NocoDBClient:
         where: str | None = None,
         fields: list[str] | None = None,
         limit: int = 25,
+        offset: int = 0,
     ) -> list[dict[str, Any]]:
         """Get multiple records from a table.
 
@@ -310,6 +334,7 @@ class NocoDBClient:
             where: Filter condition (e.g., "(Name,eq,John)")
             fields: List of fields to retrieve
             limit: Maximum number of records to retrieve
+            offset: Starting offset for pagination
 
         Returns:
             List of record dictionaries
@@ -327,7 +352,7 @@ class NocoDBClient:
         endpoint = self._path_builder.records_list(table_id, resolved_base_id)
 
         records = []
-        offset = 0
+        current_offset = offset
         remaining_limit = limit
 
         while remaining_limit > 0:
@@ -336,7 +361,7 @@ class NocoDBClient:
                 "sort": sort,
                 "where": where,
                 "limit": batch_limit,
-                "offset": offset,
+                "offset": current_offset,
             }
             if fields:
                 params["fields"] = ",".join(fields)
@@ -348,19 +373,50 @@ class NocoDBClient:
             if self.api_version == APIVersion.V3:
                 params = self._param_adapter.convert_pagination_to_v3(params)
                 if sort:
-                    params["sort"] = self._param_adapter.convert_sort_to_v3(sort)
+                    import json
+                    if isinstance(sort, str):
+                        v3_sort = self._param_adapter.convert_sort_to_v3(sort)
+                    else:
+                        v3_sort = sort
+                    # V3 expects a JSON string for the 'sort' parameter
+                    params["sort"] = json.dumps(v3_sort)
 
             response = self._get(endpoint, params=params)
 
-            batch_records = response.get("list", [])
-            records.extend(batch_records)
-
+            if self.api_version == APIVersion.V3:
+                raw_records = response.get("records", [])
+                batch_records = []
+                for r in raw_records:
+                    # Flatten v3 record: move everything from 'fields' to top level
+                    flattened = {"id": r.get("id")}
+                    if "fields" in r:
+                        flattened.update(r["fields"])
+                    # Preserve any other top-level keys if they exist
+                    for k, v in r.items():
+                        if k not in ("id", "fields"):
+                            flattened[k] = v
+                    batch_records.append(flattened)
+            else:
+                batch_records = response.get("list", [])
+                
             page_info = response.get("pageInfo", {})
-            offset += len(batch_records)
+            total_rows = page_info.get("totalRows", 1000000) # Fallback if missing
+            if self.api_version == APIVersion.V3:
+                total_rows = response.get("totalRows", 1000000) # Try top-level for v3
+            
+            records.extend(batch_records)
+            current_offset += len(batch_records)
             remaining_limit -= len(batch_records)
 
-            if page_info.get("isLastPage", True) or not batch_records:
-                break
+            if self.api_version == APIVersion.V3:
+                # V3 typically uses 'next' for pagination
+                has_next = response.get("next") is not None
+                if not batch_records or not has_next:
+                    break
+            else:
+                # v2 logic
+                if not batch_records or page_info.get("isLastPage", True):
+                    break
 
         return records[:limit]
 
@@ -398,7 +454,20 @@ class NocoDBClient:
         if fields:
             params["fields"] = ",".join(fields)
 
-        return self._get(endpoint, params=params)
+        response = self._get(endpoint, params=params)
+        
+        if self.api_version == APIVersion.V3 and isinstance(response, dict):
+            # Flatten v3 record: move everything from 'fields' to top level
+            flattened = {"id": response.get("id")}
+            if "fields" in response:
+                flattened.update(response["fields"])
+            # Preserve any other top-level keys if they exist
+            for k, v in response.items():
+                if k not in ("id", "fields"):
+                    flattened[k] = v
+            return flattened
+            
+        return response
 
     def insert_record(
         self, table_id: str, record: dict[str, Any], base_id: str | None = None
@@ -424,14 +493,22 @@ class NocoDBClient:
         # Build path using PathBuilder
         endpoint = self._path_builder.records_create(table_id, resolved_base_id)
 
-        response = self._post(endpoint, data=record)
-        # API v2 returns a single object: {"Id": 123}
+        # For v3, data must be wrapped in 'fields' property
+        payload = {"fields": record} if self.api_version == APIVersion.V3 else record
+        
+        response = self._post(endpoint, data=payload)
+        
+        # API v3 returns {"records": [{"id": 123, ...}]}
+        # API v2 returns {"Id": 123}
         if isinstance(response, dict):
-            record_id = response.get("Id")
+            if self.api_version == APIVersion.V3 and "records" in response:
+                record_id = response["records"][0].get("id")
+            else:
+                record_id = response.get("Id") or response.get("id") # Try both
         else:
             raise NocoDBException(
                 "INVALID_RESPONSE",
-                f"Expected dict response from insert operation, got {type(response)}",
+                f"Expected dict response from insert operation, got {type(response)}. Response: {response}",
             )
         if record_id is None:
             raise NocoDBException(
@@ -473,9 +550,25 @@ class NocoDBClient:
         # Build path using PathBuilder
         endpoint = self._path_builder.records_update(table_id, resolved_base_id)
 
-        response = self._patch(endpoint, data=record)
+        # For v3, data fields must be wrapped in 'fields' property
+        if self.api_version == APIVersion.V3:
+            rec_to_send = record.copy()
+            # V3 expects lowercase 'id'
+            rid = rec_to_send.pop("id", None) or rec_to_send.pop("Id", None) or record_id
+            payload = {"fields": rec_to_send}
+            if rid:
+                payload["id"] = rid
+        else:
+            payload = record
+            if record_id:
+                payload["Id"] = record_id
+
+        response = self._patch(endpoint, data=payload)
         if isinstance(response, dict):
-            record_id = response.get("Id")
+            if self.api_version == APIVersion.V3 and "records" in response:
+                record_id = response["records"][0].get("id")
+            else:
+                record_id = response.get("Id") or response.get("id")
         else:
             raise NocoDBException(
                 "INVALID_RESPONSE",
@@ -510,21 +603,27 @@ class NocoDBClient:
         if self.api_version == APIVersion.V3:
             resolved_base_id = self._resolve_base_id(table_id, base_id)
 
-        # Build path using PathBuilder
-        endpoint = self._path_builder.records_delete(table_id, resolved_base_id)
+        # Build path – V3 uses individual record endpoint for delete, same as GET
+        if self.api_version == APIVersion.V3:
+            endpoint = self._path_builder.records_get(table_id, str(record_id), resolved_base_id)
+            response = self._delete(endpoint)
+        else:
+            endpoint = self._path_builder.records_delete(table_id, resolved_base_id)
+            response = self._delete(endpoint, data={"Id": record_id})
 
-        response = self._delete(endpoint, data={"Id": record_id})
-        if isinstance(response, dict):
-            deleted_id = response.get("Id")
+        if isinstance(response, dict) or isinstance(response, list):
+            # V3 DELETE on individual record might return the deleted record or just status
+            if isinstance(response, dict):
+                deleted_id = response.get("id") or response.get("Id") or record_id
+            else:
+                deleted_id = record_id
+        elif response is True or response is None:
+            # Some versions might return just success
+            deleted_id = record_id
         else:
             raise NocoDBException(
                 "INVALID_RESPONSE",
                 f"Expected dict response from delete operation, got {type(response)}",
-            )
-        if deleted_id is None:
-            raise NocoDBException(
-                "INVALID_RESPONSE",
-                f"No record ID returned from delete operation. Response: {response}",
             )
         return deleted_id  # type: ignore[no-any-return]
 
@@ -591,23 +690,35 @@ class NocoDBClient:
         # Build path using PathBuilder
         endpoint = self._path_builder.records_create(table_id, resolved_base_id)
 
+        # For v3, each record in the list must be wrapped in 'fields'
+        if self.api_version == APIVersion.V3:
+            payload = [{"fields": r} for r in records]
+        else:
+            payload = records
+
         # NocoDB v2 API supports bulk insert via array payload
         try:
-            response = self._post(endpoint, data=records)
+            response = self._post(endpoint, data=payload)
 
-            # Response should be list of record IDs
+            # API v3 returns {"records": [{"id": 1, ...}, {"id": 2, ...}]}
+            if self.api_version == APIVersion.V3 and isinstance(response, dict) and "records" in response:
+                return [r.get("id") for r in response["records"] if r.get("id") is not None]
+
+            # API v2 returns list of record IDs: [{"Id": 1}, {"Id": 2}]
             if isinstance(response, list):
                 record_ids = []
                 for record in response:
-                    if isinstance(record, dict) and record.get("Id") is not None:
-                        record_ids.append(record["Id"])
+                    if isinstance(record, dict):
+                        rid = record.get("Id") or record.get("id")
+                        if rid is not None:
+                            record_ids.append(rid)
                 return record_ids
-            elif isinstance(response, dict) and "Id" in response:
-                # Single record response (fallback)
-                return [response["Id"]]
+            elif isinstance(response, dict):
+                rid = response.get("Id") or response.get("id")
+                return [rid] if rid is not None else []
             else:
                 raise NocoDBException(
-                    "INVALID_RESPONSE", "Unexpected response format from bulk insert"
+                    "INVALID_RESPONSE", f"Unexpected response format from bulk insert: {type(response)}"
                 )
 
         except Exception as e:
@@ -642,7 +753,7 @@ class NocoDBClient:
         for i, record in enumerate(records):
             if not isinstance(record, dict):
                 raise ValidationException(f"Record at index {i} must be a dictionary")
-            if "Id" not in record:
+            if "Id" not in record and "id" not in record:
                 raise ValidationException(f"Record at index {i} missing required 'Id' field")
 
         # Resolve base_id for v3
@@ -653,19 +764,33 @@ class NocoDBClient:
         # Build path using PathBuilder
         endpoint = self._path_builder.records_update(table_id, resolved_base_id)
 
+        # For v3, each record must be {"id": ..., "fields": {...}}
+        if self.api_version == APIVersion.V3:
+            payload = []
+            for r in records:
+                r_copy = r.copy()
+                rid = r_copy.pop("id", None) or r_copy.pop("Id", None)
+                payload.append({"id": rid, "fields": r_copy})
+        else:
+            payload = records
+
         try:
-            response = self._patch(endpoint, data=records)
+            response = self._patch(endpoint, data=payload)
 
             # Response should be list of record IDs
             if isinstance(response, list):
                 record_ids = []
                 for record in response:
-                    if isinstance(record, dict) and record.get("Id") is not None:
-                        record_ids.append(record["Id"])
+                    if isinstance(record, dict):
+                        rid = record.get("id") or record.get("Id")
+                        if rid is not None:
+                            record_ids.append(rid)
                 return record_ids
-            elif isinstance(response, dict) and "Id" in response:
-                # Single record response (fallback)
-                return [response["Id"]]
+            elif isinstance(response, dict):
+                if self.api_version == APIVersion.V3 and "records" in response:
+                    return [r.get("id") for r in response["records"] if r.get("id") is not None]
+                rid = response.get("id") or response.get("Id")
+                return [rid] if rid is not None else []
             else:
                 raise NocoDBException(
                     "INVALID_RESPONSE", "Unexpected response format from bulk update"
@@ -707,23 +832,34 @@ class NocoDBClient:
         # Build path using PathBuilder
         endpoint = self._path_builder.records_delete(table_id, resolved_base_id)
 
-        # Convert to list of dictionaries with Id field
-        records_to_delete = [{"Id": record_id} for record_id in record_ids]
+        # Convert to list of dictionaries with Id field (V3 uses lowercase 'id')
+        if self.api_version == APIVersion.V3:
+            records_to_delete = [{"id": record_id} for record_id in record_ids]
+        else:
+            records_to_delete = [{"Id": record_id} for record_id in record_ids]
 
         try:
             response = self._delete(endpoint, data=records_to_delete)
 
             # Response should be list of record IDs
             if isinstance(response, list):
-                record_ids = []
+                record_ids_out = []
                 for record in response:
-                    if isinstance(record, dict) and record.get("Id") is not None:
-                        record_ids.append(record["Id"])
-                return record_ids
-            elif isinstance(response, dict) and "Id" in response:
-                # Single record response (fallback)
-                return [response["Id"]]
+                    if isinstance(record, dict):
+                        rid = record.get("id") or record.get("Id")
+                        if rid is not None:
+                            record_ids_out.append(rid)
+                return record_ids_out
+            elif isinstance(response, dict):
+                if self.api_version == APIVersion.V3 and "records" in response:
+                    return [r.get("id") for r in response["records"] if r.get("id") is not None]
+                rid = response.get("id") or response.get("Id")
+                return [rid] if rid is not None else []
             else:
+                # Fallback to original record_ids if response format is unexpected but no error
+                # Or raise an exception if the response is truly invalid
+                if response is None or response == "": # Example of potentially "empty" but not error
+                    return record_ids
                 raise NocoDBException(
                     "INVALID_RESPONSE", "Unexpected response format from bulk delete"
                 )

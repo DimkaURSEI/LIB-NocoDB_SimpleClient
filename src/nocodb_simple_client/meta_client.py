@@ -353,6 +353,30 @@ class NocoDBMetaClient(NocoDBClient):
         table_list = response.get("list", [])
         return table_list if isinstance(table_list, list) else []
 
+    def _patch(self, endpoint: str, data: dict[str, Any] | list[dict[str, Any]]) -> dict[str, Any] | list[dict[str, Any]]:
+        """Make a PATCH request to the Meta API."""
+        return self.client._patch(endpoint, data=data)
+
+    def set_primary_column(self, table_id: str, column_id: str, base_id: str | None = None) -> dict[str, Any]:
+        """Set the primary column for a table.
+        
+        Args:
+            table_id: The table ID
+            column_id: The column ID to set as primary
+            base_id: Optional base ID
+            
+        Returns:
+            Updated table metadata
+        """
+        # Resolve base_id for v3
+        from .api_version import APIVersion
+        resolved_base_id = None
+        if self.api_version == APIVersion.V3:
+            resolved_base_id = self._resolve_base_id(table_id, base_id)
+            
+        endpoint = self._path_builder.table_get_meta(table_id, resolved_base_id)
+        return self._patch(endpoint, data={"primary_column_id": column_id})
+
     def get_table_info(self, table_id: str, base_id: str | None = None) -> dict[str, Any]:
         """Get table metadata information.
 

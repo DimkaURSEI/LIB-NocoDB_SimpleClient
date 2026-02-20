@@ -60,6 +60,7 @@ class NocoDBTable:
         where: str | None = None,
         fields: list[str] | None = None,
         limit: int = 25,
+        offset: int = 0,
         base_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """Get multiple records from the table.
@@ -69,6 +70,7 @@ class NocoDBTable:
             where: Filter condition (e.g., "(Name,eq,John)")
             fields: List of fields to retrieve
             limit: Maximum number of records to retrieve
+            offset: Starting offset for pagination
             base_id: Base ID (required for v3, optional for v2)
 
         Returns:
@@ -79,7 +81,7 @@ class NocoDBTable:
             NocoDBException: For other API errors
         """
         return self.client.get_records(
-            self.table_id, base_id=base_id, sort=sort, where=where, fields=fields, limit=limit
+            self.table_id, base_id=base_id, sort=sort, where=where, fields=fields, limit=limit, offset=offset
         )
 
     def get_record(
